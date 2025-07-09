@@ -2571,3 +2571,18 @@ p {
 	background-color: var(--primary);
 	color: var(--white);
 }
+
+/* Calendely CSS */
+.calendly-overlay .calendly-popup{
+	background-color: var(--white);
+	border-radius: 20px;
+	-ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.calendly-overlay .calendly-popup::-webkit-scrollbar{
+	display: none;
+}
+
+.dark-theme .calendly-overlay .calendly-popup{
+	background-color: var(--black);
+}
