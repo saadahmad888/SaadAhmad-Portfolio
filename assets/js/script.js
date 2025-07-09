@@ -124,20 +124,14 @@
 	const paginationContainer = document.querySelector(".pagination ul");
 	const prevBtn = document.querySelector(".pagination .prev button");
 	const nextBtn = document.querySelector(".pagination .next button");
+	const morePagesBtn = document.querySelector(".pagination .more-pages");
 
-	function fetchArticles() {
-		fetch("https://dev.to/api/articles?username=saadahmad")
-			.then(res => res.json())
-			.then(data => {
-				allArticles = data;
-				renderArticles(currentPage);
-				generatePageButtons();
-				updatePaginationState();
-			})
-			.catch(err => {
-				container.innerHTML = "<p>Error loading articles. Please try again later.</p>";
-				console.error(err);
-			});
+	function fetchLocalArticles() {
+		return fetch("data/blogs.json").then(res => res.json());
+	}
+
+	function fetchDevToArticles() {
+		return fetch("https://dev.to/api/articles?username=saadahmad").then(res => res.json());
 	}
 
 	function renderArticles(page) {
@@ -156,22 +150,22 @@
 			col.className = "col-xl-6 col-lg-4 col-md-6";
 
 			col.innerHTML = `
-        <div class="article-publications-item">
-          <div class="image">
-            <a href="${article.url}" class="d-block w-100" target="_blank">
-              <img src="${article.cover_image || 'assets/img/blog/default.jpg'}" alt="${article.title || 'Dev.to article'}" class="img-fluid w-100">
-            </a>
-            <a href="${article.url}" class="tags" target="_blank">${article.tag_list[0] || "Article"}</a>
-          </div>
-          <div class="text">
-            <a href="${article.url}" class="title" target="_blank">${article.title}</a>
-            <ul class="list-unstyled">
-              <li>${Math.ceil(article.reading_time_minutes)} min read</li>
-              <li>${new Date(article.published_at).toDateString()}</li>
-            </ul>
-          </div>
+      <div class="article-publications-item">
+        <div class="image">
+          <a href="${article.url}" class="d-block w-100" target="_blank">
+            <img src="${article.cover_image || 'assets/img/blog/default.jpg'}" alt="${article.title || 'Dev.to article'}" class="img-fluid w-100">
+          </a>
+          <a href="${article.url}" class="tags" target="_blank">${article.tag_list[0] || "Article"}</a>
         </div>
-      `;
+        <div class="text">
+          <a href="${article.url}" class="title" target="_blank">${article.title}</a>
+          <ul class="list-unstyled">
+            <li>${Math.ceil(article.reading_time_minutes)} min read</li>
+            <li>${new Date(article.published_at).toDateString()}</li>
+          </ul>
+        </div>
+      </div>
+    `;
 			container.appendChild(col);
 		});
 
@@ -180,10 +174,11 @@
 
 	function generatePageButtons() {
 		// Remove old page number buttons
-		const numberButtons = paginationContainer.querySelectorAll("li:not(.prev):not(.next):not(:has(.next-page-btn))");
+		const numberButtons = paginationContainer.querySelectorAll("li:not(.prev):not(.next):not(.more-pages)");
 		numberButtons.forEach(el => el.remove());
 
 		const totalPages = Math.ceil(allArticles.length / articlesPerPage);
+
 		for (let i = 1; i <= totalPages; i++) {
 			const li = document.createElement("li");
 			const btn = document.createElement("button");
@@ -201,6 +196,11 @@
 
 			li.appendChild(btn);
 			paginationContainer.insertBefore(li, paginationContainer.querySelector(".next"));
+		}
+
+		// Show/hide the ".more-pages" button if more than 5 pages
+		if (morePagesBtn) {
+			morePagesBtn.style.display = totalPages > 5 ? "inline-block" : "none";
 		}
 	}
 
@@ -227,13 +227,21 @@
 		}
 	});
 
-	const morePagesBtn = document.querySelector(".pagination .more-pages");
-	if (morePagesBtn) {
-		const totalPages = Math.ceil(allArticles.length / articlesPerPage);
-		morePagesBtn.style.display = totalPages > 5 ? "inline-block" : "none";
-	}
+	// Initialize Hybrid Loader
+	Promise.all([fetchLocalArticles(), fetchDevToArticles()])
+		.then(([localArticles, liveArticles]) => {
+			const localIds = new Set(localArticles.map(a => a.id));
+			const newArticles = liveArticles.filter(article => !localIds.has(article.id));
+			allArticles = [...newArticles, ...localArticles]; // new articles on top
+			renderArticles(currentPage);
+			generatePageButtons();
+		})
+		.catch(err => {
+			container.innerHTML = "<p>Error loading articles. Please try again later.</p>";
+			console.error(err);
+		});
 
-	// Initialize
-	fetchArticles();
+	
+
 
 })(jQuery);
